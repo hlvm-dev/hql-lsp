@@ -1,0 +1,18 @@
+{
+  "name": "hql-language-server",
+  "description": "HQL Language Server",
+  "version": "1.0.0",
+  "author": "HQL Team",
+  "license": "MIT",
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {
+    "vscode-languageserver": "^8.1.0",
+    "vscode-languageserver-textdocument": "^1.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.34"
+  },
+  "scripts": {}
+}

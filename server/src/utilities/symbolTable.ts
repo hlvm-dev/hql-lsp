@@ -1,5 +1,5 @@
 // server/src/utilities/symbolTable.ts
-import { HQLNode, ListNode } from './astTypes';
+import { HQLNode, ListNode, SymbolNode } from './astTypes';
 
 export interface SymbolInfo {
     name: string;
@@ -29,7 +29,9 @@ export class SymbolTable {
         this.currentScope = undefined;
     }
 
-    public enterScope(scopeName: string): void {
+    public enterScope(scopeName: string | undefined): void {
+        if (!scopeName) return;
+        
         this.currentScope = scopeName;
         if (!this.scopes.has(scopeName)) {
             this.scopes.set(scopeName, new Set());
@@ -78,7 +80,7 @@ export class SymbolTable {
         
         // Add parameters to the function scope
         for (const param of params) {
-            this.addParameter(param.name, node, param.type);
+            this.addParameter(param.name, param.type, name);
         }
         
         // Exit function scope
@@ -92,25 +94,25 @@ export class SymbolTable {
         }
     }
 
-    private addParameter(name: string, node: HQLNode, type?: string): void {
+    public addParameter(name: string, type: string | undefined, scopeName: string | undefined): void {
+        if (!scopeName) return;
+        
         const symbolInfo: SymbolInfo = {
             name,
             kind: 'parameter',
-            node,
+            node: { type: 'symbol', name } as SymbolNode, // Simplified node since we don't have a real one
             type,
-            parentScope: this.currentScope,
+            parentScope: scopeName,
             references: []
         };
         
         // Create a unique name for the parameter in this scope
-        const scopedName = `${this.currentScope}.${name}`;
+        const scopedName = `${scopeName}.${name}`;
         this.symbols.set(scopedName, symbolInfo);
         
-        if (this.currentScope) {
-            const scopeSymbols = this.scopes.get(this.currentScope);
-            if (scopeSymbols) {
-                scopeSymbols.add(scopedName);
-            }
+        const scopeSymbols = this.scopes.get(scopeName);
+        if (scopeSymbols) {
+            scopeSymbols.add(scopedName);
         }
     }
 
@@ -153,8 +155,7 @@ export class SymbolTable {
         this.symbols.set(scopedName, symbolInfo);
     }
 
-    public addReference(name: string, node: HQLNode): void {
-        const symbol = this.findSymbol(name);
+    public addReference(symbol: SymbolInfo, node: HQLNode): void {
         if (symbol && symbol.references) {
             symbol.references.push(node);
         }

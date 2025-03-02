@@ -1,18 +1,27 @@
 {
-    "name": "hql-language-client",
-    "description": "HQL Language Client for VS Code",
-    "version": "1.0.0",
-    "author": "HQL Team",
-    "license": "MIT",
-    "engines": {
-      "vscode": "^1.74.0"
-    },
-    "dependencies": {
-      "vscode-languageclient": "^8.1.0"
-    },
-    "devDependencies": {
-      "@types/node": "^16.18.34",
-      "@types/vscode": "^1.74.0",
-      "@vscode/test-electron": "^2.3.8"
-    }
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2020",
+    "outDir": "out",
+    "rootDir": "src",
+    "sourceMap": true,
+    "lib": [
+      "ES2020"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
+    "composite": true,
+    "declaration": true
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    ".vscode-test"
+  ],
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
   }
+}

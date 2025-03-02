@@ -6,6 +6,13 @@ import {
     Position,
     MarkupKind
 } from 'vscode-languageserver';
+
+// Define the Range interface
+interface Range {
+    start: Position;
+    end: Position;
+}
+
 import { HQLDocument } from './hqlDocument';
 import { HQLNode, SymbolNode, ListNode } from './utilities/astTypes';
 import { SymbolInfo } from './utilities/symbolTable';
@@ -75,7 +82,7 @@ export class SignatureHelpProvider {
         },
         'set': {
             params: ['object', 'key', 'value'],
-            documentation: 'Set the value for the given key in the object.'
+            documentation: 'Set the value for the given key in the object or create a Set.'
         },
         '+': {
             params: ['x', 'y', '...more'],

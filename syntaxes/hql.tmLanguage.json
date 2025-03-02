@@ -1,0 +1,100 @@
+{
+    "name": "HQL",
+    "scopeName": "source.hql",
+    "patterns": [
+      { "include": "#comment" },
+      { "include": "#string" },
+      { "include": "#keyword" },
+      { "include": "#special-form" },
+      { "include": "#constant" },
+      { "include": "#number" },
+      { "include": "#symbol" },
+      { "include": "#variable-parameter" },
+      { "include": "#set-literal" },
+      { "include": "#array-literal" },
+      { "include": "#type-annotation" }
+    ],
+    "repository": {
+      "comment": {
+        "match": ";.*$",
+        "name": "comment.line.semicolon.hql"
+      },
+      "string": {
+        "begin": "\"",
+        "end": "\"",
+        "name": "string.quoted.double.hql",
+        "patterns": [
+          {
+            "match": "\\\\(\\\\|[abefnrtv\"']|\\\\(|\\\\))",
+            "name": "constant.character.escape.hql"
+          },
+          {
+            "match": "\\\\(\\()(.*?)(\\))",
+            "captures": {
+              "1": { "name": "constant.character.escape.hql" },
+              "2": { "name": "variable.parameter.hql" },
+              "3": { "name": "constant.character.escape.hql" }
+            }
+          }
+        ]
+      },
+      "keyword": {
+        "match": "(?<=\\()(def|defn|fn|if|cond|let|for)\\b",
+        "name": "keyword.control.hql"
+      },
+      "special-form": {
+        "match": "(?<=\\()(import|export|defenum|vector|list|hash-map|keyword|str|print|get|set|new|return)\\b",
+        "name": "storage.type.function.hql"
+      },
+      "constant": {
+        "match": "\\b(true|false|nil|null)\\b",
+        "name": "constant.language.hql"
+      },
+      "number": {
+        "match": "\\b\\d+(\\.\\d+)?\\b",
+        "name": "constant.numeric.hql"
+      },
+      "symbol": {
+        "match": "[a-zA-Z0-9_\\+\\-\\*\\/\\<\\>\\=\\!\\.\\?][-a-zA-Z0-9_\\+\\-\\*\\/\\<\\>\\=\\!\\.\\?\\:]*",
+        "name": "variable.other.hql"
+      },
+      "variable-parameter": {
+        "match": "(?<=\\[)\\s*([a-zA-Z0-9_\\+\\-\\*\\/\\<\\>\\=\\!\\.\\?][-a-zA-Z0-9_\\+\\-\\*\\/\\<\\>\\=\\!\\.\\?]*)(?=\\s*:)",
+        "captures": {
+          "1": { "name": "variable.parameter.hql" }
+        }
+      },
+      "set-literal": {
+        "begin": "#\\[",
+        "end": "\\]",
+        "beginCaptures": {
+          "0": { "name": "punctuation.definition.set.begin.hql" }
+        },
+        "endCaptures": {
+          "0": { "name": "punctuation.definition.set.end.hql" }
+        },
+        "name": "meta.set.hql",
+        "patterns": [
+          { "include": "$self" }
+        ]
+      },
+      "array-literal": {
+        "begin": "\\[",
+        "end": "\\]",
+        "beginCaptures": {
+          "0": { "name": "punctuation.definition.array.begin.hql" }
+        },
+        "endCaptures": {
+          "0": { "name": "punctuation.definition.array.end.hql" }
+        },
+        "name": "meta.array.hql",
+        "patterns": [
+          { "include": "$self" }
+        ]
+      },
+      "type-annotation": {
+        "match": "->",
+        "name": "keyword.operator.type.hql"
+      }
+    }
+  }

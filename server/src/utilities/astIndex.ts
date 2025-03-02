@@ -67,9 +67,9 @@ export class ASTIndex {
      */
     private indexNode(node: HQLNode): void {
         // Skip nodes without position information
-        if (!(node as any).position) return;
+        if (!node.position) return;
         
-        const position = (node as any).position as Range;
+        const position = node.position as Range;
         
         // Index by position
         const positionKey = this.rangeToKey(position);
@@ -105,7 +105,9 @@ export class ASTIndex {
         let bestMatch: { node: HQLNode, size: number } | null = null;
         
         for (const [key, node] of this.nodesByPosition.entries()) {
-            const range = (node as any).position as Range;
+            if (!node.position) continue;
+            
+            const range = node.position as Range;
             
             // Check if this range contains the position
             if (this.isPositionInRange(position, range)) {

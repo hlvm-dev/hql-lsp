@@ -38,20 +38,31 @@ import {
 
 import { DocumentManager } from './documentManager';
 import { HQLDocument } from './hqlDocument';
-import { CompletionProvider } from './providers/completionProvider';
-import { DiagnosticsProvider } from './providers/diagnosticsProvider';
-import { HoverProvider } from './providers/hoverProvider';
-import { DefinitionProvider } from './providers/definitionProvider';
-import { SignatureHelpProvider } from './providers/signatureHelpProvider';
-import { SymbolProvider } from './providers/symbolProvider';
-import { FormattingProvider } from './providers/formattingProvider';
-import { RenameProvider } from './providers/renameProvider';
-import { SemanticTokensProvider } from './providers/semanticTokensProvider';
+import { CompletionProvider } from './completionProvider';
+import { DiagnosticsProvider } from './diagnosticsProvider';
+import { HoverProvider } from './hoverProvider';
+import { DefinitionProvider } from './definitionProvider';
+import { SignatureHelpProvider } from './signatureHelpProvider';
+import { SymbolProvider } from './symbolProvider';
+import { FormattingProvider } from './formattingProvider';
+import { RenameProvider } from './renameProvider';
 import { Logger } from './utilities/logger';
 
+interface ServerSettings {
+    maxNumberOfProblems: number;
+    formatOptions: {
+        indentSize: number;
+        insertSpaces: boolean;
+    };
+    logging: {
+        enabled: boolean;
+        level: string;
+    };
+}
+
 /**
- * Main server class for the HQL Language Server
- */
+* Main server class for the HQL Language Server
+*/
 export class HQLServer {
     private connection = createConnection(ProposedFeatures.all);
     private documents = new TextDocuments(TextDocument);
@@ -67,7 +78,6 @@ export class HQLServer {
     private symbolProvider: SymbolProvider;
     private formattingProvider: FormattingProvider;
     private renameProvider: RenameProvider;
-    private semanticTokensProvider: SemanticTokensProvider;
     
     // Settings
     private hasConfigurationCapability = false;
@@ -75,7 +85,7 @@ export class HQLServer {
     private hasDiagnosticRelatedInformationCapability = false;
     
     // Default settings
-    private defaultSettings = {
+    private defaultSettings: ServerSettings = {
         maxNumberOfProblems: 1000,
         formatOptions: {
             indentSize: 2,
@@ -88,11 +98,11 @@ export class HQLServer {
     };
     
     // Document settings cache
-    private documentSettings: Map<string, Thenable<any>> = new Map();
+    private documentSettings: Map<string, Promise<ServerSettings>> = new Map();
     
     /**
-     * Initialize the server
-     */
+    * Initialize the server
+    */
     constructor() {
         // Create logger
         this.logger = new Logger(this.connection);
@@ -101,15 +111,14 @@ export class HQLServer {
         this.documentManager = new DocumentManager(this.logger);
         
         // Create providers
-        this.completionProvider = new CompletionProvider(this.logger);
-        this.diagnosticsProvider = new DiagnosticsProvider(this.connection, this.logger);
-        this.hoverProvider = new HoverProvider(this.logger);
-        this.definitionProvider = new DefinitionProvider(this.logger);
-        this.signatureHelpProvider = new SignatureHelpProvider(this.logger);
-        this.symbolProvider = new SymbolProvider(this.logger);
-        this.formattingProvider = new FormattingProvider(this.logger);
-        this.renameProvider = new RenameProvider(this.logger);
-        this.semanticTokensProvider = new SemanticTokensProvider(this.logger);
+        this.completionProvider = new CompletionProvider();
+        this.diagnosticsProvider = new DiagnosticsProvider(this.connection);
+        this.hoverProvider = new HoverProvider();
+        this.definitionProvider = new DefinitionProvider();
+        this.signatureHelpProvider = new SignatureHelpProvider();
+        this.symbolProvider = new SymbolProvider();
+        this.formattingProvider = new FormattingProvider();
+        this.renameProvider = new RenameProvider();
         
         // Set up event handlers
         this.setupInitialization();
@@ -118,8 +127,8 @@ export class HQLServer {
     }
     
     /**
-     * Set up initialization event handlers
-     */
+    * Set up initialization event handlers
+    */
     private setupInitialization(): void {
         // Handle initialization from the client
         this.connection.onInitialize((params: InitializeParams) => {
@@ -154,12 +163,7 @@ export class HQLServer {
                     documentSymbolProvider: true,
                     workspaceSymbolProvider: true,
                     documentFormattingProvider: true,
-                    renameProvider: true,
-                    semanticTokensProvider: {
-                        full: true,
-                        range: true,
-                        legend: this.semanticTokensProvider.getLegend()
-                    }
+                    renameProvider: true
                 }
             };
             
@@ -205,9 +209,9 @@ export class HQLServer {
             
             // Update logger settings
             const settings = this.hasConfigurationCapability 
-                ? this.getDocumentSettings('') 
-                : Promise.resolve(this.defaultSettings);
-                
+            ? this.getDocumentSettings('') 
+            : Promise.resolve(this.defaultSettings);
+            
             settings.then(config => {
                 this.logger.setLevel(config.logging.level);
                 this.logger.setEnabled(config.logging.enabled);
@@ -216,8 +220,8 @@ export class HQLServer {
     }
     
     /**
-     * Set up document event handlers
-     */
+    * Set up document event handlers
+    */
     private setupDocumentHandlers(): void {
         // Handle document open
         this.documents.onDidOpen(event => {
@@ -246,17 +250,29 @@ export class HQLServer {
     }
     
     /**
-     * Set up request handlers for language features
-     */
+    * Set up request handlers for language features
+    */
     private setupRequestHandlers(): void {
         // Completions
         this.connection.onCompletion(
-            (params: CompletionParams): CompletionItem[] => {
-                return this.handleRequest(
+            (params: CompletionParams): CompletionItem[] | Promise<CompletionItem[]> => {
+                const result = this.handleRequest(
                     'completion',
                     params.textDocument.uri,
-                    (document) => this.completionProvider.provideCompletionItems(document, params.position, params.context)
+                    (document) => this.completionProvider.provideCompletionItems(document, params.position)
                 );
+                
+                // Convert null to empty array
+                if (result === null) {
+                    return [];
+                }
+                
+                // Handle Promise result
+                if (result instanceof Promise) {
+                    return result.then(items => items || []);
+                }
+                
+                return result;
             }
         );
         
@@ -268,7 +284,7 @@ export class HQLServer {
         
         // Hover
         this.connection.onHover(
-            (params: HoverParams): Hover | null => {
+            (params: HoverParams): Hover | null | Promise<Hover | null> => {
                 return this.handleRequest(
                     'hover',
                     params.textDocument.uri,
@@ -279,7 +295,7 @@ export class HQLServer {
         
         // Definition
         this.connection.onDefinition(
-            (params: DefinitionParams): Location | Location[] | null => {
+            (params: DefinitionParams): Location | Location[] | null | Promise<Location | Location[] | null> => {
                 return this.handleRequest(
                     'definition',
                     params.textDocument.uri,
@@ -290,7 +306,7 @@ export class HQLServer {
         
         // Signature help
         this.connection.onSignatureHelp(
-            (params: SignatureHelpParams): SignatureHelp | null => {
+            (params: SignatureHelpParams): SignatureHelp | null | Promise<SignatureHelp | null> => {
                 return this.handleRequest(
                     'signature help',
                     params.textDocument.uri,
@@ -301,12 +317,24 @@ export class HQLServer {
         
         // Document symbols
         this.connection.onDocumentSymbol(
-            (params: DocumentSymbolParams): DocumentSymbol[] | SymbolInformation[] => {
-                return this.handleRequest(
+            (params: DocumentSymbolParams): DocumentSymbol[] | SymbolInformation[] | Promise<DocumentSymbol[] | SymbolInformation[]> => {
+                const result = this.handleRequest(
                     'document symbols',
                     params.textDocument.uri,
                     (document) => this.symbolProvider.provideDocumentSymbols(document)
                 );
+                
+                // Convert null to empty array
+                if (result === null) {
+                    return [];
+                }
+                
+                // Handle Promise result
+                if (result instanceof Promise) {
+                    return result.then(items => items || []);
+                }
+                
+                return result;
             }
         );
         
@@ -326,7 +354,7 @@ export class HQLServer {
         // Formatting
         this.connection.onDocumentFormatting(
             async (params: DocumentFormattingParams): Promise<TextEdit[]> => {
-                return this.handleRequest(
+                const result = await this.handleRequest(
                     'document formatting',
                     params.textDocument.uri,
                     async (document) => {
@@ -337,12 +365,14 @@ export class HQLServer {
                         );
                     }
                 );
+                
+                return result || [];
             }
         );
         
         // Rename
         this.connection.onRenameRequest(
-            (params: RenameParams): WorkspaceEdit | null => {
+            (params: RenameParams): WorkspaceEdit | null | Promise<WorkspaceEdit | null> => {
                 return this.handleRequest(
                     'rename',
                     params.textDocument.uri,
@@ -350,44 +380,11 @@ export class HQLServer {
                 );
             }
         );
-        
-        // Semantic tokens - full
-        this.connection.languages.semanticTokens.on(
-            (params: SemanticTokensParams): SemanticTokens => {
-                return this.handleRequest(
-                    'semantic tokens',
-                    params.textDocument.uri,
-                    (document) => this.semanticTokensProvider.provideSemanticTokens(document)
-                );
-            }
-        );
-        
-        // Semantic tokens - range
-        this.connection.languages.semanticTokens.onRange(
-            (params: SemanticTokensRangeParams): SemanticTokens => {
-                return this.handleRequest(
-                    'semantic tokens range',
-                    params.textDocument.uri,
-                    (document) => this.semanticTokensProvider.provideSemanticTokensRange(document, params.range)
-                );
-            }
-        );
-        
-        // Semantic tokens - delta
-        this.connection.languages.semanticTokens.onDelta(
-            (params: SemanticTokensDeltaParams): SemanticTokens | SemanticTokensDelta => {
-                return this.handleRequest(
-                    'semantic tokens delta',
-                    params.textDocument.uri,
-                    (document) => this.semanticTokensProvider.provideSemanticTokensDelta(document, params.previousResultId)
-                );
-            }
-        );
     }
     
     /**
-     * Generic request handler that provides error handling and logging
-     */
+    * Generic request handler that provides error handling and logging
+    */
     private handleRequest<T>(
         requestName: string,
         uri: string,
@@ -409,8 +406,8 @@ export class HQLServer {
     }
     
     /**
-     * Validate a text document and send diagnostics
-     */
+    * Validate a text document and send diagnostics
+    */
     private async validateTextDocument(textDocument: TextDocument): Promise<void> {
         try {
             // Get document settings
@@ -420,10 +417,13 @@ export class HQLServer {
             const hqlDocument = this.documentManager.getDocument(textDocument);
             
             // Provide diagnostics
-            const diagnostics: Diagnostic[] = await this.diagnosticsProvider.provideDiagnostics(
+            const diagnosticsResult = this.diagnosticsProvider.provideDiagnostics(
                 hqlDocument, 
                 settings.maxNumberOfProblems
             );
+            
+            // Ensure we have an array of diagnostics
+            const diagnostics: Diagnostic[] = diagnosticsResult || [];
             
             // Send diagnostics to the client
             this.connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
@@ -433,9 +433,9 @@ export class HQLServer {
     }
     
     /**
-     * Get document settings
-     */
-    private getDocumentSettings(resource: string): Thenable<any> {
+    * Get document settings
+    */
+    private getDocumentSettings(resource: string): Promise<ServerSettings> {
         if (!this.hasConfigurationCapability) {
             return Promise.resolve(this.defaultSettings);
         }
@@ -453,8 +453,8 @@ export class HQLServer {
     }
     
     /**
-     * Start the server
-     */
+    * Start the server
+    */
     public start(): void {
         // Make the text document manager listen on the connection
         this.documents.listen(this.connection);

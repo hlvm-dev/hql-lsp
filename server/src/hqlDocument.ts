@@ -1,9 +1,9 @@
 // server/src/hqlDocument.ts
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Position, Range } from 'vscode-languageserver/node';
-import { parse } from './utilities/parser';
+import { parse, ParseError } from './utilities/parser';
 import { HQLNode, ListNode, SymbolNode, LiteralNode } from './utilities/astTypes';
-import { SymbolTable } from './utilities/symbolTable';
+import { SymbolTable, SymbolInfo } from './utilities/symbolTable';
 import { Logger } from './utilities/logger';
 import { ASTIndex } from './utilities/astIndex';
 
@@ -322,8 +322,8 @@ export class HQLDocument {
             if (enumNameNode.type === 'symbol') {
                 const symbolNode = enumNameNode as SymbolNode;
                 const enumValues = node.elements.slice(2)
-                    .filter(node => node.type === 'symbol')
-                    .map(node => (node as SymbolNode).name);
+                    .filter((node: HQLNode) => node.type === 'symbol')
+                    .map((node: HQLNode) => (node as SymbolNode).name);
                 
                 this.symbolTable.addEnum(symbolNode.name, enumValues, node);
             }
@@ -403,7 +403,7 @@ export class HQLDocument {
             // Skip certain special symbols
             if (!this.isSpecialSymbol(symbolName)) {
                 // Try to find this symbol in the symbol table
-                const symbol = this.symbolTable.findSymbol(symbolName, parentScope);
+                const symbol = this.symbolTable.findSymbol(symbolName);
                 if (symbol) {
                     this.symbolTable.addReference(symbol, symbolNode);
                 }
@@ -452,7 +452,7 @@ export class HQLDocument {
                         if (nameNode.type === 'symbol') {
                             const symbolName = (nameNode as SymbolNode).name;
                             // Add binding to let scope
-                            this.symbolTable.addVariable(symbolName, nameNode, letScope);
+                            this.symbolTable.addVariable(symbolName, nameNode);
                             
                             // Process the value for references
                             this.processReferences(bindingList.elements[i + 1], scope);

@@ -1,21 +1,24 @@
 // server/src/utilities/astTypes.ts
-// Re-export the AST types from the transpiler
-export { HQLNode, LiteralNode, SymbolNode, ListNode } from '../../../src/transpiler/hql_ast';
+import { Position, Range } from 'vscode-languageserver';
 
-// Define additional types needed for LSP functionality
-export interface Position {
-    line: number;
-    character: number;
+// Define HQL AST node types directly rather than importing
+export interface HQLNode {
+    type: string;
+    position?: Range;
 }
 
-export interface Range {
-    start: Position;
-    end: Position;
+export interface LiteralNode extends HQLNode {
+    type: "literal";
+    value: string | number | boolean | null;
 }
 
-// Extend the base HQL node types with position information
-declare module '../../../src/transpiler/hql_ast' {
-    interface HQLNode {
-        position?: Range;
-    }
+export interface SymbolNode extends HQLNode {
+    type: "symbol";
+    name: string;
+}
+
+export interface ListNode extends HQLNode {
+    type: "list";
+    elements: HQLNode[];
+    isArrayLiteral?: boolean;
 }

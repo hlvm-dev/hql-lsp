@@ -15,7 +15,7 @@ export class DiagnosticsProvider {
         this.connection = connection;
     }
 
-    public provideDiagnostics(document: HQLDocument, maxProblems: number): void {
+    public provideDiagnostics(document: HQLDocument, maxProblems: number): Diagnostic[] {
         // Check for parse errors first
         const parseError = document.getParseError();
         const diagnostics: Diagnostic[] = [];
@@ -33,6 +33,9 @@ export class DiagnosticsProvider {
 
         // Send the diagnostics to the client
         this.connection.sendDiagnostics({ uri: document.getUri(), diagnostics });
+        
+        // Important: Return the diagnostics array
+        return diagnostics;
     }
 
     private handleParseError(error: any, diagnostics: Diagnostic[], document: HQLDocument): void {

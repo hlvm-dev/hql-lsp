@@ -1,0 +1,107 @@
+{
+    "name": "hql-language-support",
+    "displayName": "HQL Language Support",
+    "description": "Language support for HQL (Higher Level Query Language)",
+    "version": "1.0.0",
+    "author": "HQL Team",
+    "license": "MIT",
+    "publisher": "hql-team",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/hql-team/hql-language-support"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "keywords": [
+        "hql",
+        "lisp",
+        "s-expressions",
+        "language-server"
+    ],
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "activationEvents": [
+        "onLanguage:hql"
+    ],
+    "main": "./client/out/extension",
+    "contributes": {
+        "languages": [
+            {
+                "id": "hql",
+                "aliases": [
+                    "HQL",
+                    "Higher Level Query Language"
+                ],
+                "extensions": [
+                    ".hql"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "hql",
+                "scopeName": "source.hql",
+                "path": "./syntaxes/hql.tmLanguage.json"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "HQL",
+            "properties": {
+                "hql.maxNumberOfProblems": {
+                    "type": "number",
+                    "default": 100,
+                    "description": "Controls the maximum number of problems produced by the server."
+                },
+                "hql.trace.server": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "messages",
+                        "verbose"
+                    ],
+                    "default": "off",
+                    "description": "Traces the communication between VS Code and the language server."
+                },
+                "hql.format.indentSize": {
+                    "type": "number",
+                    "default": 2,
+                    "description": "The size of indentation in spaces or tabs."
+                },
+                "hql.format.insertSpaces": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Insert spaces when pressing Tab."
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "hql.restartLanguageServer",
+                "title": "HQL: Restart Language Server"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -b",
+        "watch": "tsc -b -w",
+        "lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
+        "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+        "test": "vscode-test"
+    },
+    "devDependencies": {
+        "@types/node": "^16.18.34",
+        "@types/vscode": "^1.97.0",
+        "@typescript-eslint/eslint-plugin": "^6.7.0",
+        "@typescript-eslint/parser": "^6.7.0",
+        "eslint": "^8.49.0",
+        "typescript": "^5.2.2"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^9.0.1"
+    }
+}
